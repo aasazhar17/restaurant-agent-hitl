@@ -391,6 +391,8 @@ body {
 
 .chat-input-container input {
     flex-grow: 1;
+    width: 100%;
+    min-width: 0;
     background: rgba(0, 0, 0, 0.25);
     border: 1px solid var(--border-color);
     color: #fff;
@@ -883,4 +885,18 @@ body {
         min-height: 480px;
     }
 }
+
+/* MOBILE HORIZONTAL CHAT INPUT SPACE OPTIMIZER */
+@media (max-width: 480px) {
+    .chat-input-container {
+        padding: 10px 12px !important;
+        gap: 6px !important;
+    }
+    
+    .chat-input-container input {
+        padding: 10px 14px !important;
+        font-size: 0.88rem !important;
+    }
+}
+
 
