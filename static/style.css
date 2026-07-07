@@ -152,13 +152,54 @@ body {
 }
 
 @media (max-width: 1024px) {
+    .app-container {
+        padding: 10px;
+        height: auto;
+    }
+
+    .app-header {
+        flex-direction: column;
+        gap: 15px;
+        padding: 15px;
+        text-align: center;
+    }
+
+    .header-controls {
+        flex-direction: column;
+        width: 100%;
+        gap: 12px;
+    }
+
+    .thread-selector {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .thread-selector select {
+        flex-grow: 1;
+    }
+
+    #resetDbBtn {
+        width: 100%;
+    }
+
     .app-main {
         grid-template-columns: 1fr;
         height: auto;
-        overflow-y: auto;
+        gap: 15px;
     }
-    .app-container {
+
+    .customer-panel {
+        height: 580px; /* Constrains chat message container to enable scrolling on mobile */
+    }
+
+    .admin-panel {
         height: auto;
+        padding: 5px;
+    }
+
+    .message {
+        max-width: 90%;
     }
 }
 
