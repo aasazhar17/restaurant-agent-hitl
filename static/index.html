@@ -140,8 +140,28 @@
                     </div>
                 </div>
             </section>
-        </main>
     </div>
+
+    <!-- MOBILE BOTTOM NAVIGATION -->
+    <nav class="mobile-nav">
+        <button class="nav-item active" id="nav-chat" onclick="switchMobileTab('chat')">
+            <i class="fa-solid fa-comments"></i>
+            <span>Chat</span>
+        </button>
+        <button class="nav-item" id="nav-inventory" onclick="switchMobileTab('inventory')">
+            <i class="fa-solid fa-warehouse"></i>
+            <span>Menu</span>
+        </button>
+        <button class="nav-item" id="nav-manager" onclick="switchMobileTab('manager')">
+            <i class="fa-solid fa-user-shield"></i>
+            <span>Approvals</span>
+            <span class="nav-badge" id="mobilePendingBadge">0</span>
+        </button>
+        <button class="nav-item" id="nav-tracker" onclick="switchMobileTab('tracker')">
+            <i class="fa-solid fa-clipboard-list"></i>
+            <span>Tracker</span>
+        </button>
+    </nav>
 
     <!-- Script Imports -->
     <script src="/static/app.js"></script>

@@ -35,6 +35,11 @@ document.addEventListener('DOMContentLoaded', () => {
     currentThreadId = threadIdSelect.value;
     refreshMenu();
     refreshOrders();
+    
+    // Set default tab on mobile viewports
+    if (window.innerWidth <= 1024) {
+        switchMobileTab('chat');
+    }
 
     // Event Listeners
     sendBtn.addEventListener('click', sendMessage);
@@ -212,6 +217,13 @@ async function refreshOrders() {
         // Render Manager HITL Queue
         const pendingOrders = orders ? orders.filter(o => o.status === 'PENDING_APPROVAL') : [];
         pendingCount.textContent = `${pendingOrders.length} Pending`;
+
+        // Update mobile pending approvals badge count
+        const mobileBadge = document.getElementById('mobilePendingBadge');
+        if (mobileBadge) {
+            mobileBadge.textContent = pendingOrders.length;
+            mobileBadge.style.display = pendingOrders.length > 0 ? 'inline-flex' : 'none';
+        }
 
         hitlQueue.innerHTML = '';
         if (pendingOrders.length === 0) {
@@ -530,4 +542,58 @@ function appendTypingIndicator() {
 function removeTypingIndicator(id) {
     const el = document.getElementById(id);
     if (el) el.remove();
+}
+
+// Mobile tab switcher logic
+function switchMobileTab(tabName) {
+    // 1. Toggle Active class on nav buttons
+    const navItems = document.querySelectorAll('.nav-item');
+    navItems.forEach(item => item.classList.remove('active'));
+    
+    const targetNav = document.getElementById(`nav-${tabName}`);
+    if (targetNav) targetNav.classList.add('active');
+
+    // 2. DOM selection of layouts
+    const customerPanel = document.querySelector('.customer-panel');
+    const adminPanel = document.querySelector('.admin-panel');
+    const inventorySection = document.querySelector('.inventory-section');
+    const visualizerSection = document.querySelector('.visualizer-section');
+    const managerSection = document.querySelector('.manager-section');
+    const ordersSection = document.querySelector('.orders-section');
+
+    if (!customerPanel || !adminPanel) return;
+
+    // 3. Reset mobile classes
+    customerPanel.classList.remove('mobile-hide-panel', 'mobile-show-panel');
+    adminPanel.classList.remove('mobile-hide-panel', 'mobile-show-panel');
+    inventorySection.classList.remove('mobile-hide-panel', 'mobile-show-section');
+    visualizerSection.classList.remove('mobile-hide-panel', 'mobile-show-section');
+    managerSection.classList.remove('mobile-hide-panel', 'mobile-show-section');
+    ordersSection.classList.remove('mobile-hide-panel', 'mobile-show-section');
+
+    // 4. Apply visibility tags based on selected mobile tab
+    if (tabName === 'chat') {
+        customerPanel.classList.add('mobile-show-panel');
+        adminPanel.classList.add('mobile-hide-panel');
+    } else {
+        customerPanel.classList.add('mobile-hide-panel');
+        adminPanel.classList.add('mobile-show-panel');
+
+        // Hide all inner sections by default
+        inventorySection.classList.add('mobile-hide-panel');
+        visualizerSection.classList.add('mobile-hide-panel');
+        managerSection.classList.add('mobile-hide-panel');
+        ordersSection.classList.add('mobile-hide-panel');
+
+        if (tabName === 'inventory') {
+            inventorySection.classList.add('mobile-show-section');
+            visualizerSection.classList.add('mobile-show-section');
+            // If the visualizer section expands, render the Mermaid chart
+            if (isVisualizerOpen) renderDiagram();
+        } else if (tabName === 'manager') {
+            managerSection.classList.add('mobile-show-section');
+        } else if (tabName === 'tracker') {
+            ordersSection.classList.add('mobile-show-section');
+        }
+    }
 }
