@@ -29,24 +29,7 @@ class AgentState(MessagesState):
     current_order_id: Optional[int] = None
     pending_approval: bool = False
 
-# --- 3. Initialize Groq Model ---
-GROQ_API_KEY = os.getenv("GROQ_API_KEY")
-if not GROQ_API_KEY:
-    print("CRITICAL: GROQ_API_KEY not found in .env file!")
-    model = None
-else:
-    try:
-        model = ChatGroq(
-            model="llama-3.3-70b-versatile",
-            temperature=0,
-            api_key=GROQ_API_KEY
-        )
-        print("Groq Llama 3.3 70B initialized successfully!")
-    except Exception as e:
-        print(f"Groq initialization failed: {e}")
-        model = None
-
-# --- 4. Define Tools List ---
+# --- Tools List Definition ---
 tools = [
     check_item_availability,
     check_order_feasibility,
@@ -57,11 +40,30 @@ tools = [
     cancel_order
 ]
 
-# Bind tools to the model
-if model:
-    model_with_tools = model.bind_tools(tools)
-else:
+# --- 3. Initialize Groq Model ---
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+if not GROQ_API_KEY:
+    print("CRITICAL: GROQ_API_KEY not found in .env file!")
     model_with_tools = None
+else:
+    try:
+        primary_model = ChatGroq(
+            model="llama-3.3-70b-versatile",
+            temperature=0,
+            api_key=GROQ_API_KEY
+        )
+        fallback_model = ChatGroq(
+            model="llama-3.1-8b-instant",
+            temperature=0,
+            api_key=GROQ_API_KEY
+        )
+        primary_with_tools = primary_model.bind_tools(tools)
+        fallback_with_tools = fallback_model.bind_tools(tools)
+        model_with_tools = primary_with_tools.with_fallbacks([fallback_with_tools])
+        print("Groq Llama model with tools (and llama-3.1-8b fallback) initialized successfully!")
+    except Exception as e:
+        print(f"Groq initialization failed: {e}")
+        model_with_tools = None
 
 # --- 5. System Prompt to guide the Agent ---
 SYSTEM_PROMPT = SystemMessage(
@@ -148,6 +150,9 @@ def tools_node(state: AgentState, config: RunnableConfig):
                     if tool_name == "update_order_status":
                         if "APPROVED" in result_str or "REJECTED" in result_str:
                             pending_flag = False
+                            
+                    if tool_name == "cancel_order":
+                        pending_flag = False
                     
                     outputs.append(ToolMessage(content=result_str, tool_call_id=tool_call['id']))
                     break
@@ -181,29 +186,40 @@ def manager_review_node(state: AgentState):
     # IMPORTANT: Do not wrap interrupt() in a try-except block because LangGraph uses a special exception to signal interrupt.
     decision_data = interrupt(interrupt_value)
     
-    decision = decision_data.get("decision", "reject")
-    note = decision_data.get("note", "")
-    
-    # Call the update_order_status tool to apply the decision
-    try:
-        result = update_order_status.invoke({
-            "order_id": order_id,
-            "decision": decision,
-            "note": note
-        })
-    except Exception as e:
-        result = f"Failed to update order: {str(e)}"
-    
-    return {
-        "messages": [AIMessage(content=f"Manager decision processed: {decision.upper()}. Details: {result}")],
-        "pending_approval": False
-    }
+    # Check if the resume value is a manager decision
+    if isinstance(decision_data, dict) and "decision" in decision_data:
+        decision = decision_data.get("decision", "reject")
+        note = decision_data.get("note", "")
+        
+        # Call the update_order_status tool to apply the decision
+        try:
+            result = update_order_status.invoke({
+                "order_id": order_id,
+                "decision": decision,
+                "note": note
+            })
+        except Exception as e:
+            result = f"Failed to update order: {str(e)}"
+        
+        return {
+            "messages": [AIMessage(content=f"Manager decision processed: {decision.upper()}. Details: {result}")],
+            "pending_approval": False
+        }
+    else:
+        # The interrupt was resumed by a customer chat message, not a manager decision.
+        # We route back to the agent without rejecting the order.
+        return {
+            "pending_approval": True
+        }
 
 # --- 9. Routing Functions ---
-def should_continue(state: AgentState) -> Literal["tools_node", END]:
+def should_continue(state: AgentState) -> Literal["tools_node", "manager_review_node", END]:
     messages = state['messages']
     if messages and hasattr(messages[-1], 'tool_calls') and messages[-1].tool_calls:
         return "tools_node"
+    # If the order is still pending approval, route back to manager_review_node to interrupt/pause again.
+    if state.get('pending_approval', False):
+        return "manager_review_node"
     return END
 
 def after_tools_router(state: AgentState) -> Literal["manager_review_node", "agent", END]:
@@ -234,6 +250,7 @@ builder.add_conditional_edges(
     should_continue,
     {
         "tools_node": "tools_node",
+        "manager_review_node": "manager_review_node",
         END: END
     }
 )

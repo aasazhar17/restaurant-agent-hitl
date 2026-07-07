@@ -179,9 +179,13 @@ def approve_order_and_deduct_stock_db(order_id, note=""):
             return False, "Order not found."
         
         order = dict(row)
-        if order['status'] == 'APPROVED':
+        old_status = order['status']
+        if old_status == 'APPROVED':
             conn.rollback()
             return True, "Order is already approved."
+        elif old_status != 'PENDING_APPROVAL':
+            conn.rollback()
+            return False, f"Cannot approve an order that is {old_status}. Only PENDING_APPROVAL orders can be approved."
             
         items = json.loads(order['items'])
         
@@ -241,9 +245,9 @@ def modify_order_in_db(order_id, new_items_list):
         old_items = json.loads(order['items'])
         old_status = order['status']
         
-        if old_status == 'DELIVERED':
+        if old_status in ['DELIVERED', 'CANCELLED']:
             conn.rollback()
-            return False, "Cannot modify a delivered order."
+            return False, f"Cannot modify a {old_status.lower()} order."
         
         # 2. If status was APPROVED, restore stock temporarily inside the transaction
         if old_status == 'APPROVED':
@@ -345,6 +349,10 @@ def cancel_order_db(order_id):
         order = dict(row)
         old_status = order['status']
         
+        if old_status == 'DELIVERED':
+            conn.rollback()
+            return False, "Cannot cancel a delivered order."
+            
         if old_status == 'CANCELLED':
             conn.rollback()
             return True, "Order is already cancelled."
@@ -390,9 +398,13 @@ def partial_approve_order_db(order_id, approved_item_names, note=""):
             return False, "Order not found."
             
         order = dict(row)
-        if order['status'] == 'APPROVED':
+        old_status = order['status']
+        if old_status == 'APPROVED':
             conn.rollback()
             return True, "Order is already approved."
+        elif old_status != 'PENDING_APPROVAL':
+            conn.rollback()
+            return False, f"Cannot partially approve an order that is {old_status}. Only PENDING_APPROVAL orders can be approved."
             
         items = json.loads(order['items'])
         

@@ -54,7 +54,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <div class="message bot-message">
                 <div class="msg-avatar"><i class="fa-solid fa-robot"></i></div>
                 <div class="msg-content-wrapper">
-                    <div class="msg-sender">GourmetBot</div>
+                    <div class="msg-sender">AAS Restaurant</div>
                     <div class="msg-text">Switched to session <strong>${currentThreadId}</strong>. I have loaded this thread's conversational history. How can I help you?</div>
                 </div>
             </div>
@@ -479,7 +479,7 @@ async function resetSystem() {
             <div class="message bot-message">
                 <div class="msg-avatar"><i class="fa-solid fa-robot"></i></div>
                 <div class="msg-content-wrapper">
-                    <div class="msg-sender">GourmetBot</div>
+                    <div class="msg-sender">AAS Restaurant</div>
                     <div class="msg-text">Database reset and seeded successfully! All stocks are restored and orders cleared. Ready for a fresh scenario!</div>
                 </div>
             </div>
@@ -501,7 +501,7 @@ function appendMessage(sender, text) {
     msgDiv.className = `message ${isBot ? 'bot-message' : 'user-message'}`;
 
     const avatarHtml = isBot ? '<i class="fa-solid fa-robot"></i>' : '<i class="fa-solid fa-user"></i>';
-    const senderName = isBot ? 'GourmetBot' : 'Customer';
+    const senderName = isBot ? 'AAS Restaurant' : 'Customer';
 
     msgDiv.innerHTML = `
         <div class="msg-avatar">${avatarHtml}</div>
@@ -524,7 +524,7 @@ function appendTypingIndicator() {
     msgDiv.innerHTML = `
         <div class="msg-avatar"><i class="fa-solid fa-robot"></i></div>
         <div class="msg-content-wrapper">
-            <div class="msg-sender">GourmetBot</div>
+            <div class="msg-sender">AAS Restaurant</div>
             <div class="msg-text">
                 <div class="typing-indicator">
                     <div class="typing-dot"></div>
