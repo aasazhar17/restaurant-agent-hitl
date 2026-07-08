@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,7 +8,8 @@
     <!-- Outfit Google Font -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
     <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Custom Style Sheet -->
@@ -15,6 +17,7 @@
     <!-- Mermaid JS for Graph Visualizer -->
     <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
 </head>
+
 <body>
     <div class="app-container">
         <!-- HEADER -->
@@ -35,7 +38,8 @@
                         <option value="cust_session_3">Customer Thread #3</option>
                     </select>
                 </div>
-                <button id="resetDbBtn" class="btn btn-danger"><i class="fa-solid fa-rotate-right"></i> Reset System</button>
+                <button id="resetDbBtn" class="btn btn-danger"><i class="fa-solid fa-rotate-right"></i> Reset
+                    System</button>
             </div>
         </header>
 
@@ -47,37 +51,107 @@
                     <h2><i class="fa-solid fa-comments"></i> Customer Chat</h2>
                     <span class="online-indicator"><span class="pulse"></span> Bot Online</span>
                 </div>
-                
+
                 <div class="chat-area" id="chatArea">
                     <div class="message bot-message">
                         <div class="msg-avatar"><i class="fa-solid fa-robot"></i></div>
                         <div class="msg-content-wrapper">
                             <div class="msg-sender">AAS Restaurant</div>
-                            <div class="msg-text">Welcome! I can take your food order, update it, or check your order status. What would you like to order today? Check out our menu on the right!</div>
+                            <div class="msg-text">Welcome! This is the customer storefront. You can chat with the
+                                assistant, browse the menu, and place an order. Once your order is submitted, the
+                                manager will review it for approval.</div>
                         </div>
                     </div>
                 </div>
 
+                <div class="customer-order-card" id="customerOrderCard">
+                    <div class="panel-header compact-header">
+                        <h3><i class="fa-solid fa-receipt"></i> Your Latest Order</h3>
+                    </div>
+                    <div id="latestOrderSummary" class="order-summary-body">
+                        No order placed yet. Start by chatting with the bot.
+                    </div>
+                </div>
+
                 <div class="quick-chips">
-                    <span class="chip" onclick="applyQuickPrompt('I want to order 2 Veg Burgers and a Coca-Cola')">🍔 Naya Order (Burger & Coke)</span>
-                    <span class="chip" onclick="applyQuickPrompt('Can I order 10 Mango Shakes?')">🥭 Test Stock Limit (10 Shakes)</span>
-                    <span class="chip" onclick="applyQuickPrompt('What is the status of my order?')">🔍 Status Check</span>
-                    <span class="chip" onclick="applyQuickPrompt('Please modify order #1 to remove the Veg Burger and add 1 Pepperoni Pizza')">🍕 Modify Order #1</span>
+                    <span class="chip" onclick="applyQuickPrompt('I want to order 2 Veg Burgers and a Coca-Cola')">🍔
+                        Naya Order (Burger & Coke)</span>
+                    <span class="chip" onclick="applyQuickPrompt('Can I order 10 Mango Shakes?')">🥭 Test Stock Limit
+                        (10 Shakes)</span>
+                    <span class="chip" onclick="applyQuickPrompt('What is the status of my order?')">🔍 Status
+                        Check</span>
+                    <span class="chip"
+                        onclick="applyQuickPrompt('Please modify order #1 to remove the Veg Burger and add 1 Pepperoni Pizza')">🍕
+                        Modify Order #1</span>
                 </div>
 
                 <div class="chat-input-container">
-                    <input type="text" id="userInput" placeholder="Say e.g. 'I want 1 Margherita Pizza and 2 Cokes'..." autocomplete="off">
+                    <input type="text" id="userInput" placeholder="Say e.g. 'I want 1 Margherita Pizza and 2 Cokes'..."
+                        autocomplete="off">
                     <button id="sendBtn" class="btn btn-primary"><i class="fa-solid fa-paper-plane"></i></button>
                 </div>
             </section>
 
-            <!-- RIGHT PANEL: ADMIN & MANAGER DASHBOARD -->
+            <!-- RIGHT PANEL: MANAGER & ADMIN DASHBOARD -->
             <section class="panel admin-panel">
-                <!-- MENU INVENTORY -->
-                <div class="panel-section inventory-section">
+                <div class="panel-section role-switcher-section">
                     <div class="panel-header">
-                        <h2><i class="fa-solid fa-warehouse"></i> Menu & Inventory Stock</h2>
-                        <button class="btn btn-small" id="refreshMenuBtn"><i class="fa-solid fa-arrows-rotate"></i></button>
+                        <h2><i class="fa-solid fa-layer-group"></i> Business Roles</h2>
+                        <span class="badge badge-info">Switch View</span>
+                    </div>
+                    <div class="role-switcher">
+                        <button class="role-btn" data-role="customer"><i class="fa-solid fa-comments"></i>
+                            Customer Portal</button>
+                        <button class="role-btn" data-role="manager"><i class="fa-solid fa-user-shield"></i>
+                            Manager Desk</button>
+                        <button class="role-btn" data-role="admin"><i class="fa-solid fa-chart-line"></i> Admin
+                            Console</button>
+                    </div>
+                </div>
+
+                <div class="panel-section summary-section" id="summarySection" style="display: none;">
+                    <div class="panel-header">
+                        <h2><i class="fa-solid fa-chart-line"></i> Business Overview</h2>
+                        <span class="badge badge-approved">Live</span>
+                    </div>
+                    <div class="summary-grid">
+                        <div class="summary-card">
+                            <div class="summary-label">Total Orders</div>
+                            <div class="summary-value" id="totalOrdersStat">0</div>
+                        </div>
+                        <div class="summary-card">
+                            <div class="summary-label">Pending</div>
+                            <div class="summary-value" id="pendingOrdersStat">0</div>
+                        </div>
+                        <div class="summary-card">
+                            <div class="summary-label">Approved</div>
+                            <div class="summary-value" id="approvedOrdersStat">0</div>
+                        </div>
+                        <div class="summary-card">
+                            <div class="summary-label">Low Stock</div>
+                            <div class="summary-value" id="lowStockStat">0</div>
+                        </div>
+                    </div>
+                    <div class="summary-footer">
+                        <h4><i class="fa-solid fa-triangle-exclamation"></i> Low Stock Alerts</h4>
+                        <ul id="lowStockItems" class="summary-list"></ul>
+                    </div>
+                </div>
+
+                <!-- MENU INVENTORY -->
+                <div class="panel-section inventory-section" id="inventorySection">
+                    <div class="panel-header">
+                        <h2 id="inventoryTitle"><i class="fa-solid fa-warehouse"></i> Menu & Inventory Stock</h2>
+                        <button class="btn btn-small" id="refreshMenuBtn"><i
+                                class="fa-solid fa-arrows-rotate"></i></button>
+                    </div>
+                    <div class="admin-menu-form" id="adminMenuForm" style="display: none;">
+                        <input type="hidden" id="menuItemId" />
+                        <input type="text" id="menuItemName" placeholder="Item name" />
+                        <input type="number" id="menuItemPrice" placeholder="Price" min="0" step="1" />
+                        <input type="number" id="menuItemStock" placeholder="Stock" min="0" step="1" />
+                        <button class="btn btn-primary" id="saveMenuItemBtn">Add Item</button>
+                        <button class="btn btn-small" id="cancelMenuEditBtn">Cancel</button>
                     </div>
                     <div class="table-container">
                         <table class="inventory-table">
@@ -92,7 +166,8 @@
                             <tbody id="inventoryBody">
                                 <!-- Dynamic Menu Items -->
                                 <tr>
-                                    <td colspan="4" class="text-center"><i class="fa-solid fa-spinner fa-spin"></i> Loading menu...</td>
+                                    <td colspan="4" class="text-center"><i class="fa-solid fa-spinner fa-spin"></i>
+                                        Loading menu...</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -100,18 +175,19 @@
                 </div>
 
                 <!-- DYNAMIC GRAPH FLOW VISUALIZER -->
-                <div class="panel-section visualizer-section">
+                <div class="panel-section visualizer-section" id="visualizerSection">
                     <div class="panel-header" id="visualizerHeader" style="cursor: pointer;">
                         <h2><i class="fa-solid fa-diagram-project"></i> LangGraph Flow Visualizer</h2>
                         <span id="visualizerToggleIcon" class="badge badge-draft">Show</span>
                     </div>
-                    <div class="visualizer-content" id="visualizerContent" style="display: none; padding: 20px; background: rgba(0,0,0,0.2); overflow: auto; text-align: center;">
+                    <div class="visualizer-content" id="visualizerContent"
+                        style="display: none; padding: 20px; background: rgba(0,0,0,0.2); overflow: auto; text-align: center;">
                         <div class="mermaid" id="mermaidDiagram" style="display: inline-block;"></div>
                     </div>
                 </div>
 
                 <!-- ORDERS CONTROL & HITL APPROVAL -->
-                <div class="panel-section manager-section">
+                <div class="panel-section manager-section" id="managerSection">
                     <div class="panel-header">
                         <h2><i class="fa-solid fa-user-shield"></i> Manager HITL Deck (Pending Orders)</h2>
                         <span class="badge badge-warning" id="pendingCount">0 Pending</span>
@@ -126,10 +202,11 @@
                 </div>
 
                 <!-- ALL ORDERS TRACKER -->
-                <div class="panel-section orders-section">
+                <div class="panel-section orders-section" id="ordersSection" style="display: none;">
                     <div class="panel-header">
                         <h2><i class="fa-solid fa-clipboard-list"></i> Order Lifecycle Tracker</h2>
-                        <button class="btn btn-small" id="refreshOrdersBtn"><i class="fa-solid fa-arrows-rotate"></i> Refresh</button>
+                        <button class="btn btn-small" id="refreshOrdersBtn"><i class="fa-solid fa-arrows-rotate"></i>
+                            Refresh</button>
                     </div>
                     <div class="orders-list" id="ordersList">
                         <!-- Dynamic orders -->
@@ -166,4 +243,5 @@
     <!-- Script Imports -->
     <script src="/static/app.js"></script>
 </body>
+
 </html>

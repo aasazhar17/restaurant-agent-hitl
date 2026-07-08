@@ -2,6 +2,7 @@ from langchain_core.tools import tool
 from langchain_core.runnables import RunnableConfig
 from typing import Optional
 import json
+import re
 from db import (
     get_item_by_name, 
     create_order_db, 
@@ -9,8 +10,78 @@ from db import (
     update_order_status_db,
     approve_order_and_deduct_stock_db,
     modify_order_in_db,
-    cancel_order_db
+    cancel_order_db,
+    get_all_menu_items_db
 )
+
+
+def _resolve_item_name(item_name: str) -> str:
+    resolved_item = get_item_by_name(item_name)
+    return resolved_item['name'] if resolved_item else item_name
+
+
+def _extract_order_items(message: str):
+    cleaned = message.lower().strip()
+    if not cleaned:
+        return []
+
+    qty_pattern = r"\b(\d+)\s*(?:x|times|pcs|pieces|units|items|orders)?\b"
+    token_pattern = r"[a-z]+"
+
+    tokens = re.findall(token_pattern, cleaned)
+    if not tokens:
+        return []
+
+    qty = 1
+    match = re.search(qty_pattern, cleaned)
+    if match:
+        qty = int(match.group(1))
+
+    # First, try the live menu items from the database so newly added items are recognized.
+    menu_items = get_all_menu_items_db()
+    for item in menu_items:
+        item_name = item['name']
+        normalized_item = re.sub(r"[^a-z0-9]+", " ", item_name.lower()).strip()
+        if not normalized_item:
+            continue
+
+        if normalized_item in cleaned:
+            return [{"name": _resolve_item_name(item_name), "qty": qty}]
+
+    # Fallback to known aliases and broad keyword matches for common items.
+    known_keywords = {
+        "pizza": "Margherita Pizza",
+        "pepperoni": "Pepperoni Pizza",
+        "burger": "Veg Burger",
+        "fries": "French Fries",
+        "coke": "Coca-Cola",
+        "cola": "Coca-Cola",
+        "shake": "Mango Shake",
+    }
+
+    for keyword, mapped_name in known_keywords.items():
+        if keyword in cleaned:
+            return [{"name": _resolve_item_name(mapped_name), "qty": qty}]
+
+    return []
+
+
+@tool
+def understand_order_request(message: str, config: Optional[RunnableConfig] = None) -> str:
+    """
+    Interpret a shopping-style message like 'buy 2 pizzas and 1 coke' into a structured order.
+    """
+    try:
+        items = _extract_order_items(message)
+        if not items:
+            return "I couldn't understand the order request. Please mention an item like pizza, burger, coke, or fries."
+
+        thread_id = config.get("configurable", {}).get("thread_id", "default_thread") if config else "default_thread"
+        order_id = create_order_db(thread_id, items)
+        return f"Order created with ID: {order_id}. Status: PENDING_APPROVAL. Waiting for manager approval."
+    except Exception as e:
+        return f"Error understanding order request: {str(e)}"
+
 
 @tool
 def check_item_availability(item_name: str, qty: int) -> str:
@@ -18,13 +89,14 @@ def check_item_availability(item_name: str, qty: int) -> str:
     Check if a single item is available in the requested quantity.
     Input: item_name (str), qty (int)
     """
-    db_item = get_item_by_name(item_name)
+    resolved_name = _resolve_item_name(item_name)
+    db_item = get_item_by_name(resolved_name)
     if not db_item:
         return f"UNAVAILABLE: {item_name} is not on the menu."
     avail = db_item['available_qty']
     if avail < qty:
-        return f"UNAVAILABLE: Only {avail} of {item_name} available in stock."
-    return f"AVAILABLE: {item_name} is in stock with {avail} units available."
+        return f"UNAVAILABLE: Only {avail} of {db_item['name']} available in stock."
+    return f"AVAILABLE: {db_item['name']} is in stock with {avail} units available."
 
 @tool
 def check_order_feasibility(items_json: str, order_id: Optional[int] = None) -> str:
@@ -35,6 +107,13 @@ def check_order_feasibility(items_json: str, order_id: Optional[int] = None) -> 
     """
     try:
         items = json.loads(items_json)
+        resolved_items = []
+        for item in items:
+            resolved_name = _resolve_item_name(item['name'])
+            item_copy = dict(item)
+            item_copy['name'] = resolved_name
+            resolved_items.append(item_copy)
+        items = resolved_items
         
         # If we are checking feasibility for an order modification,
         # we temporarily restore the stock of the old items if the order was approved.
@@ -55,7 +134,7 @@ def check_order_feasibility(items_json: str, order_id: Optional[int] = None) -> 
             extra = restored_stock.get(name.lower(), 0)
             available = db_item['available_qty'] + extra
             if available < qty:
-                return f"INFEASIBLE: Only {available} '{name}' left in stock."
+                return f"INFEASIBLE: Only {available} '{db_item['name']}' left in stock."
                 
         return "FEASIBLE: Order is feasible and can be sent for approval."
     except Exception as e:
@@ -70,7 +149,11 @@ def create_order(items_json: str, config: RunnableConfig) -> str:
     try:
         thread_id = config.get("configurable", {}).get("thread_id", "default_thread")
         items = json.loads(items_json)
-        order_id = create_order_db(thread_id, items)
+        resolved_items = []
+        for item in items:
+            resolved_name = _resolve_item_name(item['name'])
+            resolved_items.append({"name": resolved_name, "qty": item['qty']})
+        order_id = create_order_db(thread_id, resolved_items)
         return f"Order created with ID: {order_id}. Status: PENDING_APPROVAL. Waiting for manager approval."
     except Exception as e:
         return f"Error creating order: {str(e)}"
@@ -94,7 +177,11 @@ def modify_order(order_id: int, new_items_json: str) -> str:
     """
     try:
         new_items = json.loads(new_items_json)
-        success, message = modify_order_in_db(order_id, new_items)
+        resolved_items = []
+        for item in new_items:
+            resolved_name = _resolve_item_name(item['name'])
+            resolved_items.append({"name": resolved_name, "qty": item['qty']})
+        success, message = modify_order_in_db(order_id, resolved_items)
         if success:
             return f"Order #{order_id} modified successfully. Status reset to PENDING_APPROVAL. Please get manager approval again."
         else:

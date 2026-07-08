@@ -4,7 +4,9 @@ from fastapi.responses import JSONResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from typing import Optional
+from pathlib import Path
 import json
+import os
 import uuid
 
 # Import schemas and db functions
@@ -18,12 +20,16 @@ from db import (
     reset_db_db,
     deliver_order_db,
     cancel_order_db,
-    partial_approve_order_db
+    partial_approve_order_db,
+    add_menu_item_db,
+    update_menu_item_db
 )
 from graph import graph, get_graph_diagram
 from langgraph.types import Command
 
 app = FastAPI(title="Restaurant Agent API with HITL", version="2.0")
+BASE_DIR = Path(__file__).resolve().parent
+STATIC_DIR = BASE_DIR / "static"
 
 # Request schemas for new endpoints
 class DeliverRequest(BaseModel):
@@ -37,18 +43,65 @@ class PartialApproveRequest(BaseModel):
     approved_items: list
     note: Optional[str] = ""
 
+class AddMenuItemRequest(BaseModel):
+    name: str
+    price: float
+    stock: int
+
+class UpdateMenuItemRequest(BaseModel):
+    item_id: int
+    name: Optional[str] = None
+    price: Optional[float] = None
+    stock: Optional[int] = None
+
 @app.get("/menu")
 async def get_menu():
     """Fetch all active menu items."""
     try:
         conn = get_connection()
         cursor = conn.cursor()
-        cursor.execute("SELECT name, price, available_qty FROM menu WHERE is_active = 1")
+        cursor.execute("SELECT item_id, name, price, available_qty FROM menu WHERE is_active = 1")
         items = [dict(row) for row in cursor.fetchall()]
         conn.close()
         return {"menu": items}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/admin/menu/add")
+async def admin_add_menu_item(request: AddMenuItemRequest):
+    """Allow the admin to add a new menu item."""
+    name = request.name.strip()
+    if not name:
+        raise HTTPException(status_code=400, detail="Item name is required")
+    if request.price < 0 or request.stock < 0:
+        raise HTTPException(status_code=400, detail="Price and stock cannot be negative")
+
+    item_id = add_menu_item_db(name, float(request.price), int(request.stock))
+    return {"success": True, "item_id": item_id, "message": "Item added successfully"}
+
+@app.post("/admin/menu/update")
+async def admin_update_menu_item(request: UpdateMenuItemRequest):
+    """Allow the admin to update an existing menu item."""
+    if request.name is not None:
+        request.name = request.name.strip()
+        if not request.name:
+            raise HTTPException(status_code=400, detail="Item name cannot be empty")
+
+    if request.price is not None and request.price < 0:
+        raise HTTPException(status_code=400, detail="Price cannot be negative")
+    if request.stock is not None and request.stock < 0:
+        raise HTTPException(status_code=400, detail="Stock cannot be negative")
+
+    success = update_menu_item_db(
+        request.item_id,
+        name=request.name,
+        price=float(request.price) if request.price is not None else None,
+        stock=int(request.stock) if request.stock is not None else None,
+    )
+    if not success:
+        raise HTTPException(status_code=400, detail="No valid fields were provided for update")
+
+    return {"success": True, "message": "Item updated successfully"}
 
 @app.get("/orders")
 async def get_orders():
@@ -56,6 +109,35 @@ async def get_orders():
     try:
         orders = get_all_orders_db()
         return {"orders": orders}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/summary")
+async def get_summary():
+    """Return dashboard summary metrics for manager/admin views."""
+    try:
+        orders = get_all_orders_db()
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT name, available_qty FROM menu WHERE is_active = 1")
+        menu_rows = cursor.fetchall()
+        conn.close()
+
+        pending_orders = [order for order in orders if order['status'] == 'PENDING_APPROVAL']
+        approved_orders = [order for order in orders if order['status'] == 'APPROVED']
+        low_stock_items = [
+            {"name": row[0], "available_qty": row[1]}
+            for row in menu_rows
+            if row[1] <= 5
+        ]
+
+        return {
+            "total_orders": len(orders),
+            "pending_orders": len(pending_orders),
+            "approved_orders": len(approved_orders),
+            "low_stock_count": len(low_stock_items),
+            "low_stock_items": low_stock_items,
+        }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -216,12 +298,12 @@ async def get_diagram():
         return {"mermaid": ""}
 
 # Serve static directory (mount frontend files)
-app.mount("/static", StaticFiles(directory="static"), name="static")
+app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
 @app.get("/")
 async def serve_index():
     """Serve the root index page."""
-    return FileResponse("static/index.html")
+    return FileResponse(STATIC_DIR / "index.html")
 
 @app.on_event("startup")
 async def startup_event():
@@ -230,4 +312,6 @@ async def startup_event():
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="127.0.0.1", port=8000)
+    host = os.getenv("HOST", "0.0.0.0")
+    port = int(os.getenv("PORT", "8000"))
+    uvicorn.run(app, host=host, port=port)

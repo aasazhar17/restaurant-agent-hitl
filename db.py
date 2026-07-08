@@ -1,5 +1,6 @@
 import sqlite3
 import json
+import re
 from datetime import datetime
 
 # Database file path
@@ -74,16 +75,140 @@ def reset_db_db():
     conn.close()
     init_db()
 
+
+def add_menu_item_db(name, price, stock, active=1):
+    """Add a new menu item for admin management."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute(
+            "INSERT INTO menu (name, price, available_qty, is_active) VALUES (?, ?, ?, ?)",
+            (name, price, stock, active)
+        )
+        conn.commit()
+        return cursor.lastrowid
+    finally:
+        conn.close()
+
+
+def update_menu_item_db(item_id, name=None, price=None, stock=None, active=None):
+    """Update an existing menu item from the admin console."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    try:
+        updates = []
+        params = []
+        if name is not None:
+            updates.append("name = ?")
+            params.append(name)
+        if price is not None:
+            updates.append("price = ?")
+            params.append(price)
+        if stock is not None:
+            updates.append("available_qty = ?")
+            params.append(stock)
+        if active is not None:
+            updates.append("is_active = ?")
+            params.append(active)
+
+        if not updates:
+            return False
+
+        params.append(item_id)
+        cursor.execute(f"UPDATE menu SET {', '.join(updates)} WHERE item_id = ?", params)
+        conn.commit()
+        return True
+    finally:
+        conn.close()
+
 # ------------------ SELECTION & CREATION HELPERS ------------------
 
+ALIASES = {
+    "coke": "Coca-Cola",
+    "cola": "Coca-Cola",
+    "mobile": "Phone",
+    "phone": "Phone",
+    "burger": "Veg Burger",
+    "fries": "French Fries",
+    "shake": "Mango Shake",
+    "pizza": "Margherita Pizza",
+}
+
+
+def _normalize(text):
+    if not text:
+        return ""
+    text = text.lower().strip()
+    text = re.sub(r"[^a-z0-9]+", " ", text)
+    return re.sub(r"\s+", " ", text).strip()
+
+
+def _get_menu_items():
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM menu WHERE is_active = 1")
+    rows = cursor.fetchall()
+    conn.close()
+    return [dict(row) for row in rows]
+
+
+def get_all_menu_items_db():
+    """Return all active menu items from the database."""
+    return _get_menu_items()
+
+
 def get_item_by_name(name):
-    """Fetch item by name (case-insensitive)."""
+    """Fetch item by name with fuzzy matching and simple aliases."""
+    if not name:
+        return None
+
+    normalized_query = _normalize(name)
+    if not normalized_query:
+        return None
+
+    alias_target = ALIASES.get(normalized_query)
+    if alias_target:
+        name = alias_target
+        normalized_query = _normalize(name)
+
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM menu WHERE LOWER(name) = LOWER(?) AND is_active = 1", (name,))
     row = cursor.fetchone()
     conn.close()
-    return dict(row) if row else None
+    if row:
+        return dict(row)
+
+    items = _get_menu_items()
+    if not items:
+        return None
+
+    normalized_items = []
+    for item in items:
+        candidate = _normalize(item['name'])
+        normalized_items.append((candidate, item))
+
+    # Exact token overlap first
+    query_tokens = set(normalized_query.split())
+    scored = []
+    for candidate, item in normalized_items:
+        candidate_tokens = set(candidate.split())
+        overlap = len(query_tokens & candidate_tokens)
+        if overlap:
+            score = overlap
+            if candidate.startswith(normalized_query) or normalized_query.startswith(candidate):
+                score += 5
+            if normalized_query in candidate or candidate in normalized_query:
+                score += 3
+            scored.append((score, item))
+
+    if scored:
+        scored.sort(key=lambda x: x[0], reverse=True)
+        top_score, top_item = scored[0]
+        if top_score > 0:
+            return top_item
+
+    return None
 
 def get_order_by_id(order_id):
     """Fetch order details and parse JSON items."""
