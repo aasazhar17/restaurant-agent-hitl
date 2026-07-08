@@ -9,6 +9,7 @@ from langchain_groq import ChatGroq
 from langchain_core.runnables import RunnableConfig
 from dotenv import load_dotenv
 import os
+from db import get_connection
 
 # Load environment variables (API key)
 load_dotenv()
@@ -65,6 +66,40 @@ else:
         print(f"Groq initialization failed: {e}")
         model_with_tools = None
 
+def get_clarification_prompt(user_message: str) -> Optional[str]:
+    """Return a clarification question for generic menu requests like 'pizza' or 'burger'."""
+    if not user_message or not isinstance(user_message, str):
+        return None
+
+    message = user_message.strip().lower()
+    if not message:
+        return None
+
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT name FROM menu WHERE is_active = 1")
+    menu_items = [row[0] for row in cursor.fetchall()]
+    conn.close()
+
+    for item in menu_items:
+        if item.lower() in message:
+            return None
+
+    generic_keywords = ["pizza", "burger", "shake", "fries", "drink", "food", "meal", "sandwich"]
+    matched_keywords = [keyword for keyword in generic_keywords if keyword in message]
+    if not matched_keywords:
+        return None
+
+    category = matched_keywords[0]
+    relevant_items = [item for item in menu_items if category.lower() in item.lower()]
+    if not relevant_items:
+        return None
+
+    options = ", ".join(relevant_items)
+    if category == "pizza":
+        return f"I can help with that. Which pizza flavor/type would you like? We currently have: {options}. Please tell me the exact flavor and quantity."
+    return f"I can help with that. Which {category} would you like? We currently have: {options}. Please tell me the exact item and quantity."
+
 # --- 5. System Prompt to guide the Agent ---
 SYSTEM_PROMPT = SystemMessage(
     content="""You are a professional restaurant ordering assistant.
@@ -78,6 +113,7 @@ SYSTEM_PROMPT = SystemMessage(
     7. cancel_order(order_id): Call this when the user requests to cancel their order.
 
     IMPORTANT RULES:
+    - If the customer's request is generic or ambiguous (for example: 'pizza', 'burger', 'drink'), do NOT create an order yet. Ask a clarification question first and offer the relevant menu options.
     - You must ALWAYS call check_order_feasibility BEFORE calling create_order or modify_order.
     - items_json must be a JSON string of a list. Example: '[{"name": "Veg Burger", "qty": 2}]'
     - Never invent order IDs. If the customer asks for status or modification or cancellation, ask them for the order ID if they haven't provided it, or look it up from the conversation context.
@@ -93,10 +129,21 @@ def agent_node(state: AgentState, config: RunnableConfig):
         return {"messages": [AIMessage(content="❌ System Error: LLM not configured. Please check API key.")]}
 
     messages = state['messages']
-    
+
     # Ensure System Prompt is always at the beginning
     if not messages or not isinstance(messages[0], SystemMessage):
         messages = [SYSTEM_PROMPT] + list(messages)
+
+    latest_user_message = None
+    for message in reversed(messages):
+        if isinstance(message, HumanMessage):
+            latest_user_message = message.content
+            break
+
+    if latest_user_message:
+        clarification_prompt = get_clarification_prompt(latest_user_message)
+        if clarification_prompt:
+            return {"messages": [AIMessage(content=clarification_prompt)]}
     
     try:
         response = model_with_tools.invoke(messages)
