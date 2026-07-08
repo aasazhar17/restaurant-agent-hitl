@@ -207,88 +207,6 @@ body {
     }
 }
 
-/* ROLE SWITCHER */
-.role-switcher {
-    display: flex;
-    gap: 10px;
-    flex-wrap: wrap;
-    padding: 10px 20px 16px;
-}
-
-.role-btn {
-    border: 1px solid var(--border-color);
-    background: rgba(255, 255, 255, 0.04);
-    color: var(--text-muted);
-    padding: 8px 12px;
-    border-radius: 999px;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.role-btn.active {
-    background: var(--primary-gradient);
-    color: white;
-    border-color: transparent;
-}
-
-.summary-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 10px;
-    padding: 12px 20px;
-}
-
-.summary-card {
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid var(--border-color);
-    border-radius: 12px;
-    padding: 12px;
-}
-
-.summary-label {
-    color: var(--text-muted);
-    font-size: 0.8rem;
-}
-
-.summary-value {
-    font-size: 1.2rem;
-    font-weight: 700;
-    margin-top: 4px;
-}
-
-.summary-footer {
-    padding: 0 20px 20px;
-}
-
-.customer-order-card {
-    margin: 12px 16px 6px;
-    border: 1px solid var(--border-color);
-    border-radius: 14px;
-    background: rgba(255, 255, 255, 0.04);
-    padding: 12px 14px;
-}
-
-.compact-header {
-    padding: 0 0 8px;
-    margin-bottom: 6px;
-}
-
-.order-summary-body {
-    color: var(--text-muted);
-    font-size: 0.92rem;
-    line-height: 1.5;
-}
-
-.order-summary-body strong {
-    color: var(--text-primary);
-}
-
-.summary-list {
-    margin-top: 8px;
-    padding-left: 18px;
-    color: var(--text-muted);
-}
-
 /* PANELS */
 .panel {
     background: var(--bg-surface);
@@ -616,45 +534,11 @@ body {
     overflow-x: auto;
 }
 
-.admin-menu-form {
-    display: grid;
-    grid-template-columns: 1.4fr 0.8fr 0.8fr auto auto;
-    gap: 8px;
-    padding: 12px 16px 0;
-}
-
-.admin-menu-form input {
-    background: rgba(0, 0, 0, 0.2);
-    border: 1px solid var(--border-color);
-    color: #fff;
-    border-radius: 8px;
-    padding: 8px 10px;
-    font-family: var(--font-stack);
-}
-
-.admin-menu-form .btn {
-    padding: 8px 12px;
-}
-
-.admin-menu-hint {
-    color: var(--text-muted);
-    font-size: 0.8rem;
-    padding: 8px 16px 12px;
-}
-
 .inventory-table {
     width: 100%;
     border-collapse: collapse;
     text-align: left;
     font-size: 0.9rem;
-}
-
-.inventory-table tbody tr.clickable-row {
-    cursor: pointer;
-}
-
-.inventory-table tbody tr.clickable-row:hover {
-    background: rgba(255, 255, 255, 0.08);
 }
 
 .inventory-table th,

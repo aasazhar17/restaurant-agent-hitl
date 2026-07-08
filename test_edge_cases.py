@@ -13,9 +13,23 @@ from db import (
     cancel_order_db,
     deliver_order_db
 )
-from tools import cancel_order
+from tools import cancel_order, create_order
+from graph import tools_node
+from langchain_core.messages import AIMessage
 
 def run_edge_cases():
+    print("\n[Test 0] Natural-language order creation should enter pending approval state...")
+    reset_db_db()
+    state = {
+        "messages": [AIMessage(content="", tool_calls=[{"id": "1", "name": "understand_order_request", "args": {"message": "buy 2 Veg Burgers"}}])],
+        "current_order_id": None,
+        "pending_approval": False,
+    }
+    result = tools_node(state, {"configurable": {"thread_id": "approval-debug"}})
+    print("Pending approval state after parsing order:", result.get("pending_approval"), result.get("current_order_id"))
+    assert result.get("pending_approval") is True, "Natural-language order parsing must trigger pending approval"
+    assert result.get("current_order_id") is not None, "The resulting order ID should be captured"
+    print("-> Test 0 Passed!")
     print("=== STARTING EDGE CASE CONSTRAINT TESTS ===")
     
     # Reset DB
@@ -115,6 +129,14 @@ def run_edge_cases():
     assert success, "Should succeed"
     assert new_stock == initial_stock - 2, "Stock should decrease by 2"
     print("-> Test 5 Passed!")
+
+    print("\n[Test 6] Infeasible create order should be blocked before approval...")
+    reset_db_db()
+    result = create_order.invoke({"items_json": '[{"name": "Mango Shake", "qty": 10}]'}, config={"configurable": {"thread_id": "infeasible-thread"}})
+    print("Infeasible create order response:", result)
+    assert "INFEASIBLE" in result, "Infeasible orders should be rejected before manager approval"
+    assert "Order created" not in result, "An infeasible order should not be created"
+    print("-> Test 6 Passed!")
 
     print("\n=== ALL EDGE CASE CONSTRAINT TESTS PASSED SUCCESSFULLY! ===")
 

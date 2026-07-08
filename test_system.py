@@ -1,14 +1,13 @@
 # test_system.py
 import os
 import json
-from db import reset_db_db, get_item_by_name, get_order_by_id, get_all_orders_db, add_menu_item_db
+from db import reset_db_db, get_item_by_name, get_order_by_id, get_all_orders_db
 from tools import (
     check_item_availability,
     check_order_feasibility,
     create_order,
     modify_order,
-    update_order_status,
-    understand_order_request
+    update_order_status
 )
 
 def run_tests():
@@ -46,11 +45,6 @@ def run_tests():
     alias_match = check_item_availability.invoke({"item_name": "coke", "qty": 1})
     print("Availability check (alias coke):", alias_match)
     assert "Coca-Cola" in alias_match, "Aliases should resolve to the correct menu item"
-
-    ecommerce_style = understand_order_request.invoke({"message": "Please buy 2 pizzas and 1 coke for me"}, config={"configurable": {"thread_id": "test_thread_ecom"}})
-    print("E-commerce style order parsing:", ecommerce_style)
-    assert "Order created" in ecommerce_style or "pending approval" in ecommerce_style.lower(), "E-commerce style instructions should create an order"
-    reset_db_db()
     
     # Whole cart feasibility
     cart_feasible = check_order_feasibility.invoke({"items_json": '[{"name": "Veg Burger", "qty": 2}, {"name": "Coca-Cola", "qty": 1}]'})
@@ -168,17 +162,6 @@ def run_tests():
     assert burger['available_qty'] == 15, "Stock remains at 15"
     assert coke['available_qty'] == 30, "Stock remains at 30"
     print("Test 7 Passed: Rejected orders leave stock untouched and update status correctly.")
-
-    print("\n[Test 8] Testing newly added menu item can be understood from chat-style request...")
-    reset_db_db()
-    add_menu_item_db("Spicy Fries", 120, 8)
-    parsed = understand_order_request.invoke({"message": "Please order 2 spicy fries"}, config={"configurable": {"thread_id": "test_thread_new_item"}})
-    print("New item parsing:", parsed)
-    assert "Order created" in parsed or "pending approval" in parsed.lower(), "Newly added menu items should be orderable from chat"
-    orders = get_all_orders_db()
-    assert orders, "An order should have been created for the new item"
-    assert orders[-1]['items'][0]['name'] == "Spicy Fries", "The newly added menu item should be recognized by the parser"
-    print("Test 8 Passed: Newly added menu items are recognized in chat-style requests.")
 
     print("\n=== ALL CORE VERIFICATION TESTS PASSED SUCCESSFULLY! ===")
 

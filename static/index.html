@@ -57,19 +57,9 @@
                         <div class="msg-avatar"><i class="fa-solid fa-robot"></i></div>
                         <div class="msg-content-wrapper">
                             <div class="msg-sender">AAS Restaurant</div>
-                            <div class="msg-text">Welcome! This is the customer storefront. You can chat with the
-                                assistant, browse the menu, and place an order. Once your order is submitted, the
-                                manager will review it for approval.</div>
+                            <div class="msg-text">Welcome! I can take your food order, update it, or check your order
+                                status. What would you like to order today? Check out our menu on the right!</div>
                         </div>
-                    </div>
-                </div>
-
-                <div class="customer-order-card" id="customerOrderCard">
-                    <div class="panel-header compact-header">
-                        <h3><i class="fa-solid fa-receipt"></i> Your Latest Order</h3>
-                    </div>
-                    <div id="latestOrderSummary" class="order-summary-body">
-                        No order placed yet. Start by chatting with the bot.
                     </div>
                 </div>
 
@@ -92,66 +82,14 @@
                 </div>
             </section>
 
-            <!-- RIGHT PANEL: MANAGER & ADMIN DASHBOARD -->
+            <!-- RIGHT PANEL: ADMIN & MANAGER DASHBOARD -->
             <section class="panel admin-panel">
-                <div class="panel-section role-switcher-section">
-                    <div class="panel-header">
-                        <h2><i class="fa-solid fa-layer-group"></i> Business Roles</h2>
-                        <span class="badge badge-info">Switch View</span>
-                    </div>
-                    <div class="role-switcher">
-                        <button class="role-btn" data-role="customer"><i class="fa-solid fa-comments"></i>
-                            Customer Portal</button>
-                        <button class="role-btn" data-role="manager"><i class="fa-solid fa-user-shield"></i>
-                            Manager Desk</button>
-                        <button class="role-btn" data-role="admin"><i class="fa-solid fa-chart-line"></i> Admin
-                            Console</button>
-                    </div>
-                </div>
-
-                <div class="panel-section summary-section" id="summarySection" style="display: none;">
-                    <div class="panel-header">
-                        <h2><i class="fa-solid fa-chart-line"></i> Business Overview</h2>
-                        <span class="badge badge-approved">Live</span>
-                    </div>
-                    <div class="summary-grid">
-                        <div class="summary-card">
-                            <div class="summary-label">Total Orders</div>
-                            <div class="summary-value" id="totalOrdersStat">0</div>
-                        </div>
-                        <div class="summary-card">
-                            <div class="summary-label">Pending</div>
-                            <div class="summary-value" id="pendingOrdersStat">0</div>
-                        </div>
-                        <div class="summary-card">
-                            <div class="summary-label">Approved</div>
-                            <div class="summary-value" id="approvedOrdersStat">0</div>
-                        </div>
-                        <div class="summary-card">
-                            <div class="summary-label">Low Stock</div>
-                            <div class="summary-value" id="lowStockStat">0</div>
-                        </div>
-                    </div>
-                    <div class="summary-footer">
-                        <h4><i class="fa-solid fa-triangle-exclamation"></i> Low Stock Alerts</h4>
-                        <ul id="lowStockItems" class="summary-list"></ul>
-                    </div>
-                </div>
-
                 <!-- MENU INVENTORY -->
-                <div class="panel-section inventory-section" id="inventorySection">
+                <div class="panel-section inventory-section">
                     <div class="panel-header">
-                        <h2 id="inventoryTitle"><i class="fa-solid fa-warehouse"></i> Menu & Inventory Stock</h2>
+                        <h2><i class="fa-solid fa-warehouse"></i> Menu & Inventory Stock</h2>
                         <button class="btn btn-small" id="refreshMenuBtn"><i
                                 class="fa-solid fa-arrows-rotate"></i></button>
-                    </div>
-                    <div class="admin-menu-form" id="adminMenuForm" style="display: none;">
-                        <input type="hidden" id="menuItemId" />
-                        <input type="text" id="menuItemName" placeholder="Item name" />
-                        <input type="number" id="menuItemPrice" placeholder="Price" min="0" step="1" />
-                        <input type="number" id="menuItemStock" placeholder="Stock" min="0" step="1" />
-                        <button class="btn btn-primary" id="saveMenuItemBtn">Add Item</button>
-                        <button class="btn btn-small" id="cancelMenuEditBtn">Cancel</button>
                     </div>
                     <div class="table-container">
                         <table class="inventory-table">
@@ -175,7 +113,7 @@
                 </div>
 
                 <!-- DYNAMIC GRAPH FLOW VISUALIZER -->
-                <div class="panel-section visualizer-section" id="visualizerSection">
+                <div class="panel-section visualizer-section">
                     <div class="panel-header" id="visualizerHeader" style="cursor: pointer;">
                         <h2><i class="fa-solid fa-diagram-project"></i> LangGraph Flow Visualizer</h2>
                         <span id="visualizerToggleIcon" class="badge badge-draft">Show</span>
@@ -187,7 +125,7 @@
                 </div>
 
                 <!-- ORDERS CONTROL & HITL APPROVAL -->
-                <div class="panel-section manager-section" id="managerSection">
+                <div class="panel-section manager-section">
                     <div class="panel-header">
                         <h2><i class="fa-solid fa-user-shield"></i> Manager HITL Deck (Pending Orders)</h2>
                         <span class="badge badge-warning" id="pendingCount">0 Pending</span>
@@ -202,7 +140,7 @@
                 </div>
 
                 <!-- ALL ORDERS TRACKER -->
-                <div class="panel-section orders-section" id="ordersSection" style="display: none;">
+                <div class="panel-section orders-section">
                     <div class="panel-header">
                         <h2><i class="fa-solid fa-clipboard-list"></i> Order Lifecycle Tracker</h2>
                         <button class="btn btn-small" id="refreshOrdersBtn"><i class="fa-solid fa-arrows-rotate"></i>

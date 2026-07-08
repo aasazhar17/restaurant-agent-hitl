@@ -2,7 +2,6 @@
 
 let currentThreadId = 'cust_session_1';
 let isVisualizerOpen = false;
-let menuCache = [];
 
 // DOM Elements
 const chatArea = document.getElementById('chatArea');
@@ -20,26 +19,6 @@ const visualizerHeader = document.getElementById('visualizerHeader');
 const visualizerContent = document.getElementById('visualizerContent');
 const visualizerToggleIcon = document.getElementById('visualizerToggleIcon');
 const mermaidDiagram = document.getElementById('mermaidDiagram');
-const roleButtons = document.querySelectorAll('.role-btn');
-const summarySection = document.getElementById('summarySection');
-const inventorySection = document.getElementById('inventorySection');
-const inventoryTitle = document.getElementById('inventoryTitle');
-const visualizerSection = document.getElementById('visualizerSection');
-const managerSection = document.getElementById('managerSection');
-const ordersSection = document.getElementById('ordersSection');
-const totalOrdersStat = document.getElementById('totalOrdersStat');
-const pendingOrdersStat = document.getElementById('pendingOrdersStat');
-const approvedOrdersStat = document.getElementById('approvedOrdersStat');
-const lowStockStat = document.getElementById('lowStockStat');
-const lowStockItems = document.getElementById('lowStockItems');
-const latestOrderSummary = document.getElementById('latestOrderSummary');
-const menuItemIdInput = document.getElementById('menuItemId');
-const menuItemNameInput = document.getElementById('menuItemName');
-const menuItemPriceInput = document.getElementById('menuItemPrice');
-const menuItemStockInput = document.getElementById('menuItemStock');
-const saveMenuItemBtn = document.getElementById('saveMenuItemBtn');
-const cancelMenuEditBtn = document.getElementById('cancelMenuEditBtn');
-const adminMenuForm = document.getElementById('adminMenuForm');
 
 // Initialize Mermaid
 if (window.mermaid) {
@@ -54,10 +33,8 @@ if (window.mermaid) {
 // Initialize App
 document.addEventListener('DOMContentLoaded', () => {
     currentThreadId = threadIdSelect.value;
-    switchRole('customer');
     refreshMenu();
     refreshOrders();
-    refreshSummary();
 
     // Set default tab on mobile viewports
     if (window.innerWidth <= 1024) {
@@ -87,47 +64,10 @@ document.addEventListener('DOMContentLoaded', () => {
     resetDbBtn.addEventListener('click', resetSystem);
     refreshMenuBtn.addEventListener('click', refreshMenu);
     refreshOrdersBtn.addEventListener('click', refreshOrders);
-    saveMenuItemBtn.addEventListener('click', saveMenuItem);
-    cancelMenuEditBtn.addEventListener('click', resetMenuForm);
-    roleButtons.forEach(btn => btn.addEventListener('click', () => switchRole(btn.dataset.role)));
 
     // Toggle Flow Visualizer
     visualizerHeader.addEventListener('click', toggleVisualizer);
-
-    inventoryBody.addEventListener('click', (event) => {
-        const row = event.target.closest('tr[data-item-id]');
-        if (!row) return;
-
-        if (document.querySelector('.role-btn.active')?.dataset.role !== 'admin') {
-            return;
-        }
-
-        const item = menuCache.find(entry => String(entry.item_id) === row.dataset.itemId);
-        if (item) {
-            editMenuItem(item.item_id, item.name, item.price, item.available_qty);
-        }
-    });
 });
-
-function switchRole(role) {
-    roleButtons.forEach(btn => btn.classList.toggle('active', btn.dataset.role === role));
-
-    const isManager = role === 'manager';
-    const isAdmin = role === 'admin';
-    const isCustomer = role === 'customer';
-
-    summarySection.style.display = isAdmin ? 'block' : 'none';
-    inventorySection.style.display = isCustomer || isAdmin ? 'block' : 'none';
-    inventoryTitle.innerHTML = isAdmin ? '<i class="fa-solid fa-warehouse"></i> Menu & Inventory Stock' : '<i class="fa-solid fa-utensils"></i> Menu Card';
-    visualizerSection.style.display = isAdmin ? 'block' : 'none';
-    managerSection.style.display = isManager || isAdmin ? 'block' : 'none';
-    ordersSection.style.display = isAdmin ? 'block' : 'none';
-    adminMenuForm.style.display = isAdmin ? 'grid' : 'none';
-
-    if (!isAdmin) {
-        resetMenuForm();
-    }
-}
 
 // Toggle LangGraph Visualizer
 function toggleVisualizer() {
@@ -179,88 +119,18 @@ function formatPrice(amount) {
     return `₹${amount}`;
 }
 
-function resetMenuForm() {
-    menuItemIdInput.value = '';
-    menuItemNameInput.value = '';
-    menuItemPriceInput.value = '';
-    menuItemStockInput.value = '';
-    saveMenuItemBtn.textContent = 'Add Item';
-}
-
-function editMenuItem(itemId, name, price, stock) {
-    menuItemIdInput.value = itemId;
-    menuItemNameInput.value = name;
-    menuItemPriceInput.value = price;
-    menuItemStockInput.value = stock;
-    saveMenuItemBtn.textContent = 'Update Item';
-    menuItemNameInput.focus();
-}
-
-async function saveMenuItem() {
-    if (!document.querySelector('.role-btn.active')?.dataset.role || document.querySelector('.role-btn.active').dataset.role !== 'admin') {
-        alert('Only the admin console can add or edit menu items.');
-        return;
-    }
-
-    const name = menuItemNameInput.value.trim();
-    const price = Number(menuItemPriceInput.value);
-    const stock = Number(menuItemStockInput.value);
-
-    if (!name) {
-        alert('Please enter an item name.');
-        return;
-    }
-
-    if (!Number.isFinite(price) || price < 0) {
-        alert('Please enter a valid price.');
-        return;
-    }
-
-    if (!Number.isFinite(stock) || stock < 0) {
-        alert('Please enter a valid stock value.');
-        return;
-    }
-
-    const payload = { name, price, stock };
-    const endpoint = menuItemIdInput.value ? '/admin/menu/update' : '/admin/menu/add';
-    if (menuItemIdInput.value) {
-        payload.item_id = Number(menuItemIdInput.value);
-    }
-
-    try {
-        const response = await fetch(endpoint, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        });
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.detail || 'Could not save menu item');
-
-        alert(data.message || 'Menu item saved successfully');
-        resetMenuForm();
-        refreshMenu();
-        refreshSummary();
-    } catch (err) {
-        alert(err.message);
-        console.error(err);
-    }
-}
-
 // Refresh Menu Stock Table
 async function refreshMenu() {
     try {
         const response = await fetch('/menu');
         const data = await response.json();
         const menu = data.menu;
-        menuCache = menu || [];
 
         inventoryBody.innerHTML = '';
         if (!menu || menu.length === 0) {
             inventoryBody.innerHTML = '<tr><td colspan="4" class="text-center">Menu is empty.</td></tr>';
             return;
         }
-
-        const isAdminView = document.querySelector('.role-btn.active')?.dataset.role === 'admin';
 
         menu.forEach(item => {
             let stockBadge = '';
@@ -273,10 +143,6 @@ async function refreshMenu() {
             }
 
             const tr = document.createElement('tr');
-            if (isAdminView) {
-                tr.dataset.itemId = item.item_id;
-                tr.className = 'clickable-row';
-            }
             tr.innerHTML = `
                 <td><strong>${item.name}</strong></td>
                 <td>${formatPrice(item.price)}</td>
@@ -292,44 +158,12 @@ async function refreshMenu() {
     }
 }
 
-async function refreshSummary() {
-    try {
-        const response = await fetch('/summary');
-        const data = await response.json();
-        totalOrdersStat.textContent = data.total_orders ?? 0;
-        pendingOrdersStat.textContent = data.pending_orders ?? 0;
-        approvedOrdersStat.textContent = data.approved_orders ?? 0;
-        lowStockStat.textContent = data.low_stock_count ?? 0;
-        lowStockItems.innerHTML = data.low_stock_items?.length
-            ? data.low_stock_items.map(item => `<li>${item.name} — ${item.available_qty} left</li>`).join('')
-            : '<li>No low-stock items</li>';
-    } catch (err) {
-        console.error('Error refreshing summary:', err);
-    }
-}
-
 // Refresh Orders and HITL queue
 async function refreshOrders() {
     try {
         const response = await fetch('/orders');
         const data = await response.json();
         const orders = data.orders;
-        const pendingOrders = orders ? orders.filter(o => o.status === 'PENDING_APPROVAL') : [];
-        const currentThreadOrders = orders ? orders.filter(order => order.customer_thread_id === currentThreadId) : [];
-        const recentOrder = currentThreadOrders[0] || null;
-
-        if (latestOrderSummary) {
-            if (!recentOrder) {
-                latestOrderSummary.innerHTML = '<div>No order placed yet. Start by chatting with the bot.</div>';
-            } else {
-                const itemText = recentOrder.items.map(item => `${item.name} ×${item.qty}`).join(', ');
-                latestOrderSummary.innerHTML = `
-                    <div><strong>Status:</strong> ${recentOrder.status}</div>
-                    <div><strong>Items:</strong> ${itemText}</div>
-                    <div><strong>Last Updated:</strong> ${new Date(recentOrder.updated_at).toLocaleString()}</div>
-                `;
-            }
-        }
 
         // Render Lifecycle Tracker
         ordersList.innerHTML = '';
@@ -381,6 +215,7 @@ async function refreshOrders() {
         }
 
         // Render Manager HITL Queue
+        const pendingOrders = orders ? orders.filter(o => o.status === 'PENDING_APPROVAL') : [];
         pendingCount.textContent = `${pendingOrders.length} Pending`;
 
         // Update mobile pending approvals badge count

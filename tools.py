@@ -2,7 +2,6 @@ from langchain_core.tools import tool
 from langchain_core.runnables import RunnableConfig
 from typing import Optional
 import json
-import re
 from db import (
     get_item_by_name, 
     create_order_db, 
@@ -10,77 +9,13 @@ from db import (
     update_order_status_db,
     approve_order_and_deduct_stock_db,
     modify_order_in_db,
-    cancel_order_db,
-    get_all_menu_items_db
+    cancel_order_db
 )
 
 
 def _resolve_item_name(item_name: str) -> str:
     resolved_item = get_item_by_name(item_name)
     return resolved_item['name'] if resolved_item else item_name
-
-
-def _extract_order_items(message: str):
-    cleaned = message.lower().strip()
-    if not cleaned:
-        return []
-
-    qty_pattern = r"\b(\d+)\s*(?:x|times|pcs|pieces|units|items|orders)?\b"
-    token_pattern = r"[a-z]+"
-
-    tokens = re.findall(token_pattern, cleaned)
-    if not tokens:
-        return []
-
-    qty = 1
-    match = re.search(qty_pattern, cleaned)
-    if match:
-        qty = int(match.group(1))
-
-    # First, try the live menu items from the database so newly added items are recognized.
-    menu_items = get_all_menu_items_db()
-    for item in menu_items:
-        item_name = item['name']
-        normalized_item = re.sub(r"[^a-z0-9]+", " ", item_name.lower()).strip()
-        if not normalized_item:
-            continue
-
-        if normalized_item in cleaned:
-            return [{"name": _resolve_item_name(item_name), "qty": qty}]
-
-    # Fallback to known aliases and broad keyword matches for common items.
-    known_keywords = {
-        "pizza": "Margherita Pizza",
-        "pepperoni": "Pepperoni Pizza",
-        "burger": "Veg Burger",
-        "fries": "French Fries",
-        "coke": "Coca-Cola",
-        "cola": "Coca-Cola",
-        "shake": "Mango Shake",
-    }
-
-    for keyword, mapped_name in known_keywords.items():
-        if keyword in cleaned:
-            return [{"name": _resolve_item_name(mapped_name), "qty": qty}]
-
-    return []
-
-
-@tool
-def understand_order_request(message: str, config: Optional[RunnableConfig] = None) -> str:
-    """
-    Interpret a shopping-style message like 'buy 2 pizzas and 1 coke' into a structured order.
-    """
-    try:
-        items = _extract_order_items(message)
-        if not items:
-            return "I couldn't understand the order request. Please mention an item like pizza, burger, coke, or fries."
-
-        thread_id = config.get("configurable", {}).get("thread_id", "default_thread") if config else "default_thread"
-        order_id = create_order_db(thread_id, items)
-        return f"Order created with ID: {order_id}. Status: PENDING_APPROVAL. Waiting for manager approval."
-    except Exception as e:
-        return f"Error understanding order request: {str(e)}"
 
 
 @tool

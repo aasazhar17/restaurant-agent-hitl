@@ -21,8 +21,7 @@ from tools import (
     get_order_status,
     modify_order,
     update_order_status,
-    cancel_order,
-    understand_order_request
+    cancel_order
 )
 
 # --- 2. Define Extended State ---
@@ -38,8 +37,7 @@ tools = [
     get_order_status,
     modify_order,
     update_order_status,
-    cancel_order,
-    understand_order_request
+    cancel_order
 ]
 
 # --- 3. Initialize Groq Model ---
@@ -74,11 +72,10 @@ SYSTEM_PROMPT = SystemMessage(
     1. check_item_availability(item_name, qty): Use this to check if a single item is available.
     2. check_order_feasibility(items_json, order_id): Use this to check if the entire cart/combination of items is feasible against live stock. Always call this BEFORE creating or modifying an order. For modifying an order, make sure to pass the optional `order_id` so we can account for currently reserved items.
     3. create_order(items_json): Call this to place a new order. It automatically retrieves the thread context. No thread_id argument is needed.
-    4. understand_order_request(message): Use this when the user gives a shopping-style instruction like 'buy 2 pizzas and 1 coke' or 'please order 1 burger'. It converts that request into an order.
-    5. modify_order(order_id, new_items_json): Call this to modify items in an existing order.
-    6. get_order_status(order_id): Call this when the user asks for status.
-    7. update_order_status(order_id, decision, note): ONLY for executing approval. (You rarely call this directly unless confirming decision outcome).
-    8. cancel_order(order_id): Call this when the user requests to cancel their order.
+    4. modify_order(order_id, new_items_json): Call this to modify items in an existing order.
+    5. get_order_status(order_id): Call this when the user asks for status.
+    6. update_order_status(order_id, decision, note): ONLY for executing approval. (You rarely call this directly unless confirming decision outcome).
+    7. cancel_order(order_id): Call this when the user requests to cancel their order.
 
     IMPORTANT RULES:
     - You must ALWAYS call check_order_feasibility BEFORE calling create_order or modify_order.

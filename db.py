@@ -75,52 +75,6 @@ def reset_db_db():
     conn.close()
     init_db()
 
-
-def add_menu_item_db(name, price, stock, active=1):
-    """Add a new menu item for admin management."""
-    conn = get_connection()
-    cursor = conn.cursor()
-    try:
-        cursor.execute(
-            "INSERT INTO menu (name, price, available_qty, is_active) VALUES (?, ?, ?, ?)",
-            (name, price, stock, active)
-        )
-        conn.commit()
-        return cursor.lastrowid
-    finally:
-        conn.close()
-
-
-def update_menu_item_db(item_id, name=None, price=None, stock=None, active=None):
-    """Update an existing menu item from the admin console."""
-    conn = get_connection()
-    cursor = conn.cursor()
-    try:
-        updates = []
-        params = []
-        if name is not None:
-            updates.append("name = ?")
-            params.append(name)
-        if price is not None:
-            updates.append("price = ?")
-            params.append(price)
-        if stock is not None:
-            updates.append("available_qty = ?")
-            params.append(stock)
-        if active is not None:
-            updates.append("is_active = ?")
-            params.append(active)
-
-        if not updates:
-            return False
-
-        params.append(item_id)
-        cursor.execute(f"UPDATE menu SET {', '.join(updates)} WHERE item_id = ?", params)
-        conn.commit()
-        return True
-    finally:
-        conn.close()
-
 # ------------------ SELECTION & CREATION HELPERS ------------------
 
 ALIASES = {
@@ -150,11 +104,6 @@ def _get_menu_items():
     rows = cursor.fetchall()
     conn.close()
     return [dict(row) for row in rows]
-
-
-def get_all_menu_items_db():
-    """Return all active menu items from the database."""
-    return _get_menu_items()
 
 
 def get_item_by_name(name):
