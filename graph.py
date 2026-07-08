@@ -85,20 +85,48 @@ def get_clarification_prompt(user_message: str) -> Optional[str]:
         if item.lower() in message:
             return None
 
-    generic_keywords = ["pizza", "burger", "shake", "fries", "drink", "food", "meal", "sandwich"]
-    matched_keywords = [keyword for keyword in generic_keywords if keyword in message]
-    if not matched_keywords:
+    category_aliases = {
+        "pizza": ["pizza"],
+        "burger": ["burger"],
+        "shake": ["shake"],
+        "fries": ["fries"],
+        "drink": ["drink", "coke", "cola", "soda"],
+        "food": ["food", "meal"],
+        "sandwich": ["sandwich"],
+    }
+
+    matched_categories = []
+    for category, aliases in category_aliases.items():
+        if any(alias in message for alias in aliases):
+            matched_categories.append(category)
+
+    if not matched_categories:
         return None
 
-    category = matched_keywords[0]
-    relevant_items = [item for item in menu_items if category.lower() in item.lower()]
-    if not relevant_items:
+    clarification_parts = []
+    for category in matched_categories:
+        relevant_items = [item for item in menu_items if category.lower() in item.lower()]
+        if not relevant_items:
+            continue
+
+        options = ", ".join(relevant_items)
+        if category == "pizza":
+            clarification_parts.append(
+                f"Which pizza flavor/type would you like? We currently have: {options}. Please tell me the exact flavor and quantity."
+            )
+        elif category == "drink":
+            clarification_parts.append(
+                f"Which drink would you like? We currently have: {options}. Please tell me the exact drink and quantity."
+            )
+        else:
+            clarification_parts.append(
+                f"Which {category} would you like? We currently have: {options}. Please tell me the exact item and quantity."
+            )
+
+    if not clarification_parts:
         return None
 
-    options = ", ".join(relevant_items)
-    if category == "pizza":
-        return f"I can help with that. Which pizza flavor/type would you like? We currently have: {options}. Please tell me the exact flavor and quantity."
-    return f"I can help with that. Which {category} would you like? We currently have: {options}. Please tell me the exact item and quantity."
+    return "I can help with that. " + " ".join(clarification_parts)
 
 # --- 5. System Prompt to guide the Agent ---
 SYSTEM_PROMPT = SystemMessage(

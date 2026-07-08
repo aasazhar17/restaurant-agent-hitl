@@ -17,6 +17,12 @@ def test_specific_menu_request_does_not_need_clarification():
     assert prompt is None
 
 
+def test_mixed_specific_and_generic_request_asks_for_missing_details():
+    prompt = get_clarification_prompt("I want 2 Margherita Pizza and 1 coke")
+    assert prompt is not None
+    assert "flavor" in prompt.lower() or "drink" in prompt.lower()
+
+
 def test_specific_order_can_be_created_for_manager_approval():
     reset_db_db()
     result = create_order.invoke(
